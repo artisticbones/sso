@@ -155,34 +155,12 @@ func (lg *Logger) Fatalf(template string, args ...interface{}) {
 	lg.log.Sugar().Fatalf(template, args...)
 }
 
-func Info(msg string, fields ...Field) {
-	_lg.Info(msg, fields...)
-}
-
-func Infof(template string, args ...interface{}) {
-	_lg.Infof(template, args...)
-}
-
-func Debug(msg string, fields ...Field) {
-	_lg.Debug(msg, fields...)
-}
-
-func Debugf(template string, args ...interface{}) {
-	_lg.Debugf(template, args...)
-}
-
-func Error(msg string, fields ...Field) {
-	_lg.Error(msg, fields...)
-}
-
-func Errorf(template string, args ...interface{}) {
-	_lg.Errorf(template, args...)
-}
-
-func Fatal(msg string, fields ...Field) {
-	_lg.Fatal(msg, fields...)
-}
-
-func Fatalf(template string, args ...interface{}) {
-	_lg.Fatalf(template, args...)
-}
+func Info(msg string, fields ...Field)            { _lg.Info(msg, fields...) }
+func Infof(template string, args ...interface{})  { _lg.Infof(template, args...) }
+func Debug(msg string, fields ...Field)           { _lg.Debug(msg, fields...) }
+func Debugf(template string, args ...interface{}) { _lg.Debugf(template, args...) }
+func Error(msg string, fields ...Field)           { _lg.Error(msg, fields...) }
+func Errorf(template string, args ...interface{}) { _lg.Errorf(template, args...) }
+func Fatal(msg string, fields ...Field)           { _lg.Fatal(msg, fields...) }
+func Fatalf(template string, args ...interface{}) { _lg.Fatalf(template, args...) }
+func Sync() error                                 { return _lg.Sync() }
