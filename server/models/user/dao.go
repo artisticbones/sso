@@ -1,17 +1,18 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
 )
 
 type DAO interface {
-	GetUserById(id uint) (*User, error)
-	GetAllUsers() ([]*User, error)
-	CreateUser(user *User) *gorm.DB
-	UpdateUser(user *User) *gorm.DB
-	DeleteUser(id uint) *gorm.DB
+	GetUserById(ctx context.Context, id uint) (*User, error)
+	GetAllUsers(ctx context.Context) ([]*User, error)
+	CreateUser(ctx context.Context, user *User) *gorm.DB
+	UpdateUser(ctx context.Context, user *User) *gorm.DB
+	DeleteUser(ctx context.Context, id uint) *gorm.DB
 }
 
 type JdbcImpl struct {
@@ -22,12 +23,12 @@ func NewJdbcImpl(db *gorm.DB) *JdbcImpl {
 	return &JdbcImpl{db: db}
 }
 
-func (impl *JdbcImpl) GetUserById(id uint) (*User, error) {
+func (impl *JdbcImpl) GetUserById(ctx context.Context, id uint) (*User, error) {
 	if impl.db == nil {
 		return nil, fmt.Errorf("DB ERROR, err = DB is Nil")
 	}
 	user := &User{}
-	err := impl.db.Take(user, "id = ?", id).Error
+	err := impl.db.WithContext(ctx).Take(user, "id = ?", id).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
@@ -37,12 +38,13 @@ func (impl *JdbcImpl) GetUserById(id uint) (*User, error) {
 	return user, nil
 }
 
-func (impl *JdbcImpl) GetAllUsers() ([]*User, error) {
+// GetAllUsers get all users from database.
+// When the amount of data is large, this function may cause library dragging.
+func (impl *JdbcImpl) GetAllUsers(ctx context.Context) (users []*User, err error) {
 	if impl.db == nil {
 		return nil, fmt.Errorf("DB ERROR, err = DB is Nil")
 	}
-	users := make([]*User, 0, 1)
-	err := impl.db.Find(&users).Error
+	err = impl.db.WithContext(ctx).Find(&users).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
@@ -52,14 +54,14 @@ func (impl *JdbcImpl) GetAllUsers() ([]*User, error) {
 	return users, nil
 }
 
-func (impl *JdbcImpl) CreateUser(user *User) *gorm.DB {
-	return impl.db.Create(user)
+func (impl *JdbcImpl) CreateUser(ctx context.Context, user *User) *gorm.DB {
+	return impl.db.WithContext(ctx).Create(user)
 }
 
-func (impl *JdbcImpl) UpdateUser(user *User) *gorm.DB {
-	return impl.db.Updates(user)
+func (impl *JdbcImpl) UpdateUser(ctx context.Context, user *User) *gorm.DB {
+	return impl.db.WithContext(ctx).Updates(user)
 }
 
-func (impl *JdbcImpl) DeleteUser(id uint) *gorm.DB {
-	return impl.db.Delete(&User{}, id)
+func (impl *JdbcImpl) DeleteUser(ctx context.Context, id uint) *gorm.DB {
+	return impl.db.WithContext(ctx).Delete(&User{}, id)
 }
