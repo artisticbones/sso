@@ -13,7 +13,7 @@ ENV CGO_ENABLED=0 \
 # 下载依赖
 RUN go mod download
 # 编译应用
-RUN go build -a -v -o sso -ldflags "-s -w" -tags prod
+RUN go build -a -v -o commands -ldflags "-s -w" -tags prod
 # 基于 alpine 镜像构建
 FROM alpine:3.16
 # 设置工作目录

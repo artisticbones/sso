@@ -12,7 +12,7 @@ func init() {
 }
 
 const (
-	defaultLog = "sso.log"
+	defaultLog = "commands.log"
 	maxSize    = 500 //megabytes
 	maxBackups = 3
 	maxAge     = 7
