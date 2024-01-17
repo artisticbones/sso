@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/artisticbones/sso/init/gin"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ const (
 	cliName        = "commands"
 	cliUsage       = "[OPTIONS] COMMAND"
 	cliDescription = "A simple commands line client for commands"
+	copyright      = ``
 
 	defaultDialTimeout      = 2 * time.Second
 	defaultCommandTimeOut   = 5 * time.Second
@@ -38,6 +40,10 @@ func commandNotFound(cCtx *cli.Context, command string) {
 	fmt.Printf("See 'sso --help'")
 }
 
+func action(cCtx *cli.Context) error {
+	return gin.Start()
+}
+
 var (
 	app = &cli.App{
 		Name:                   cliName,
@@ -47,11 +53,11 @@ var (
 		EnableBashCompletion:   true,
 		Before:                 nil,
 		After:                  nil,
-		Action:                 nil,
+		Action:                 action,
 		CommandNotFound:        commandNotFound,
 		Compiled:               compileTime(),
 		Authors:                authors,
-		Copyright:              "",
+		Copyright:              copyright,
 		Reader:                 os.Stdin,
 		Writer:                 os.Stdout,
 		ErrWriter:              os.Stderr,
