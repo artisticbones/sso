@@ -1,7 +1,11 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+	"github.com/artisticbones/sso/configs"
+	"github.com/artisticbones/sso/init/cache"
+	"github.com/artisticbones/sso/init/database"
 	"github.com/artisticbones/sso/init/gin"
 	"github.com/urfave/cli/v2"
 	"log"
@@ -14,11 +18,6 @@ const (
 	cliUsage       = "[OPTIONS] COMMAND"
 	cliDescription = "A simple commands line client for commands"
 	copyright      = ``
-
-	defaultDialTimeout      = 2 * time.Second
-	defaultCommandTimeOut   = 5 * time.Second
-	defaultKeepAliveTime    = 2 * time.Second
-	defaultKeepAliveTimeOut = 6 * time.Second
 )
 
 var authors = []*cli.Author{
@@ -41,7 +40,14 @@ func commandNotFound(cCtx *cli.Context, command string) {
 }
 
 func action(cCtx *cli.Context) error {
-	return gin.Start()
+	db := database.GetDB(true)
+	defer func(db *database.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(db)
+	return gin.Start(cCtx.Context)
 }
 
 var (
@@ -51,7 +57,7 @@ var (
 		Args:                   true,
 		Description:            cliDescription,
 		EnableBashCompletion:   true,
-		Before:                 nil,
+		Before:                 before,
 		After:                  nil,
 		Action:                 action,
 		CommandNotFound:        commandNotFound,
@@ -66,12 +72,20 @@ var (
 	}
 )
 
+func before(ctx *cli.Context) error {
+	// init config
+	cfg := configs.Load("")
+	cache.Get(cfg.Cache.RedisUri())
+	return nil
+}
+
 func init() {
 	app.Commands = append(app.Commands)
 }
 
 func Start() error {
 	// Make help just show the usage
+	go cache.KeepAlive(context.Background())
 	return app.Run(os.Args)
 }
 

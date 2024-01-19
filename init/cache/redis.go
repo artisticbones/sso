@@ -2,9 +2,11 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	"log"
 	"sync"
+	"time"
 )
 
 var (
@@ -13,17 +15,17 @@ var (
 	mu   sync.Mutex
 )
 
-func newCache() (*redis.Client, error) {
-	options, err := redis.ParseURL("")
+func newCache(uri string) (*redis.Client, error) {
+	options, err := redis.ParseURL(uri)
 	if err != nil {
 		return nil, err
 	}
 	return redis.NewClient(options), nil
 }
 
-func Get() *redis.Client {
+func Get(uri string) *redis.Client {
 	f := func() {
-		rdb, err := newCache()
+		rdb, err := newCache(uri)
 		if err != nil {
 			log.Fatalf("init redis error, err = %v", err)
 		}
@@ -38,4 +40,23 @@ func Get() *redis.Client {
 
 func Ping(ctx context.Context) string {
 	return _rdb.Ping(ctx).Val()
+}
+
+func KeepAlive(ctx context.Context) {
+	var (
+		tick = time.NewTicker(60 * time.Second)
+	)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case t := <-tick.C:
+			if Ping(ctx) == "PONG" {
+				continue
+			}
+			// need to alert
+			fmt.Printf("cannot get response from redis. Time: %v", t)
+		}
+	}
 }

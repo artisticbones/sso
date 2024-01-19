@@ -8,10 +8,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 )
 
-func Start() error {
+const (
+	addr = "localhost"
+	port = 8080
+)
+
+func Start(ctx context.Context) error {
 	engine := gin.Default()
 
 	// 使用无缓冲的通道来监听系统信号
@@ -20,7 +24,7 @@ func Start() error {
 
 	// 创建一个 HTTP 服务
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf("%s:%d", addr, port),
 		Handler: engine,
 	}
 
@@ -34,8 +38,8 @@ func Start() error {
 	<-quit
 
 	// 创建一个 context，设置超时时间
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	//defer cancel()
 
 	// 关闭 HTTP 服务
 	if err := server.Shutdown(ctx); err != nil {

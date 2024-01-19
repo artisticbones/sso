@@ -9,19 +9,20 @@ import (
 	"time"
 )
 
-var (
-	_db  *gorm.DB
-	once sync.Once
-	mu   sync.Mutex
-	//todo: for test
+type DB struct {
+	DB    *gorm.DB
+	once  sync.Once
+	mu    sync.Mutex
 	debug bool
-)
+}
+
+var _db *DB
 
 func nowFunc() time.Time {
 	return time.Now().UTC()
 }
 
-func newDB() (*gorm.DB, error) {
+func newDB(debug bool) (*DB, error) {
 	dsn := ""
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: &schema.NamingStrategy{
@@ -46,31 +47,36 @@ func newDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	return &DB{
+		DB:    db,
+		once:  sync.Once{},
+		mu:    sync.Mutex{},
+		debug: debug,
+	}, nil
 }
 
-func GetDB() *gorm.DB {
+func GetDB(debug bool) *DB {
 	f := func() {
-		db, err := newDB()
+		db, err := newDB(debug)
 		if err != nil {
 			log.Fatalf("init database error, err = %v", err)
 		}
 		_db = db
 	}
-	once.Do(f)
+	_db.once.Do(f)
 
-	mu.Lock()
-	defer mu.Unlock()
+	_db.mu.Lock()
+	defer _db.mu.Unlock()
 	return _db
 }
 
-func Close() error {
-	mu.Lock()
-	defer mu.Unlock()
+func (ins *DB) Close() error {
+	ins.mu.Lock()
+	defer ins.mu.Unlock()
 
-	db, err := _db.DB()
+	d, err := ins.DB.DB()
 	if err != nil {
 		return err
 	}
-	return db.Close()
+	return d.Close()
 }
