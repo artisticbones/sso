@@ -164,3 +164,11 @@ func Errorf(template string, args ...interface{}) { _lg.Errorf(template, args...
 func Fatal(msg string, fields ...Field)           { _lg.Fatal(msg, fields...) }
 func Fatalf(template string, args ...interface{}) { _lg.Fatalf(template, args...) }
 func Sync() error                                 { return _lg.Sync() }
+
+func ParseLevel(text string) Level {
+	level, err := zapcore.ParseLevel(text)
+	if err != nil {
+		panic(err)
+	}
+	return level
+}
