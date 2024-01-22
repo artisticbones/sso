@@ -2,6 +2,10 @@ package configs
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v3"
+	"io"
+	"log"
+	"os"
 	"sync"
 	"time"
 )
@@ -53,13 +57,36 @@ type Config struct {
 	LogLevel  string    `yaml:"logLevel"`
 	Orm       UriConfig `yaml:"orm"`
 	Cache     UriConfig `yaml:"cache"`
-	once      sync.Once
 }
 
-func Load(path string) *Config {
-	var cfg = &Config{}
-	cfg.once.Do(func() {
+var (
+	_cfg *Config
+	once sync.Once
+)
 
+func Load(path string) *Config {
+	once.Do(func() {
+		var cfg = &Config{}
+		file, err := os.Open(path)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		body, err := io.ReadAll(file)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		err = yaml.Unmarshal(body, cfg)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		_cfg = cfg
 	})
-	return cfg
+	return _cfg
+}
+
+func Gloal() *Config {
+	return _cfg
 }

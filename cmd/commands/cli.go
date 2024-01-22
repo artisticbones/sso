@@ -20,6 +20,11 @@ const (
 	copyright      = ``
 )
 
+var (
+	path        = ""
+	globalFlags = []cli.Flag{}
+)
+
 var authors = []*cli.Author{
 	{Name: "Crane", Email: "artisticbones@163.com"},
 }
@@ -74,13 +79,14 @@ var (
 
 func before(ctx *cli.Context) error {
 	// init config
-	cfg := configs.Load("")
+	cfg := configs.Load(path)
 	cache.Get(cfg.Cache.RedisUri())
 	return nil
 }
 
 func init() {
 	app.Commands = append(app.Commands)
+	app.Flags = append(app.Flags, globalFlags...)
 }
 
 func Start() error {
