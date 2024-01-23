@@ -4,6 +4,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"log"
 	"os"
 )
 
@@ -56,6 +57,13 @@ func GetLogger() *Logger { return _lg }
 
 // Default function initialize a default instance
 func Default() {
+	f, err := os.OpenFile(defaultLog, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
 	file := zapcore.AddSync(&lumberjack.Logger{
 		Filename:   defaultLog,
 		MaxSize:    maxSize, // megabytes
@@ -80,6 +88,13 @@ func Default() {
 }
 
 func New(filename string, level Level, opts ...Option) *Logger {
+	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
 	file := zapcore.AddSync(&lumberjack.Logger{
 		Filename:   filename,
 		MaxSize:    maxSize, // megabytes

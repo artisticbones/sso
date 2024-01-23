@@ -1,28 +1,26 @@
-package commands
+package main
 
 import (
 	"context"
 	"fmt"
+	"github.com/artisticbones/sso/cmd/flags"
 	"github.com/artisticbones/sso/configs"
 	"github.com/artisticbones/sso/init/cache"
 	"github.com/artisticbones/sso/init/database"
 	"github.com/artisticbones/sso/init/gin"
+	"github.com/redis/go-redis/v9"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
+	"sort"
 	"time"
 )
 
 const (
-	cliName        = "commands"
+	cliName        = "sso"
 	cliUsage       = "[OPTIONS] COMMAND"
-	cliDescription = "A simple commands line client for commands"
+	cliDescription = "sso commands line client for commands"
 	copyright      = ``
-)
-
-var (
-	path        = ""
-	globalFlags = []cli.Flag{}
 )
 
 var authors = []*cli.Author{
@@ -45,13 +43,23 @@ func commandNotFound(cCtx *cli.Context, command string) {
 }
 
 func action(cCtx *cli.Context) error {
-	db := database.GetDB(true)
+	var (
+		globalCfg = configs.Gloal()
+	)
+
+	db := database.GetDB(func() bool {
+		if globalCfg.Mode == "dev" {
+			return true
+		}
+		return false
+	}())
 	defer func(db *database.DB) {
 		err := db.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
 	}(db)
+
 	return gin.Start(cCtx.Context)
 }
 
@@ -79,14 +87,38 @@ var (
 
 func before(ctx *cli.Context) error {
 	// init config
-	cfg := configs.Load(path)
-	cache.Get(cfg.Cache.RedisUri())
+	var (
+		cfg *configs.Config
+		rdb *redis.Client
+	)
+
+	if path := flags.CfgPath(); path != "" {
+		cfg = configs.Load(path)
+	} else {
+		cfg = configs.New(flags.Mode(), flags.JwtSecret(), flags.LogLevel(), flags.LogFile(), flags.OrmUri(), flags.CacheUri())
+	}
+	if cfg == nil {
+		return fmt.Errorf("cannot get config file")
+	}
+
+	rdb = cache.Get(cfg.Cache.RedisUri())
+
+	resp, err := rdb.Ping(ctx.Context).Result()
+	if err != nil {
+		return err
+	}
+	if resp != "PONG" {
+		return fmt.Errorf("ping rdb server but without %s response", resp)
+	}
 	return nil
 }
 
 func init() {
 	app.Commands = append(app.Commands)
-	app.Flags = append(app.Flags, globalFlags...)
+	// global flags
+	app.Flags = append(app.Flags, &flags.ModeFlag, &flags.JwtFlag, &flags.LogLevelFlag, &flags.CfgFilePathFlag, &flags.OrmFlag, &flags.CacheFlag)
+	sort.Sort(cli.CommandsByName(app.Commands))
+	sort.Sort(cli.FlagsByName(app.Flags))
 }
 
 func Start() error {

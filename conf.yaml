@@ -1,0 +1,17 @@
+mode: "dev"
+jwtSecret: ""
+log:
+  level: "info"
+  file: "sso.log"
+orm:
+  user: "root"
+  password: "crane"
+  host: "localhost"
+  port: "3306"
+  database: "sso"
+cache:
+  user: ""
+  password: ""
+  host: "localhost"
+  port: "6379"
+  database: "0"
