@@ -20,7 +20,15 @@ func newCache(uri string) (*redis.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return redis.NewClient(options), nil
+	client := redis.NewClient(options)
+	resp, err := client.Ping(context.Background()).Result()
+	if err != nil {
+		return nil, err
+	}
+	if resp != "PONG" {
+		return nil, fmt.Errorf("cannot get %s from redis", resp)
+	}
+	return client, nil
 }
 
 func Get(uri string) *redis.Client {
