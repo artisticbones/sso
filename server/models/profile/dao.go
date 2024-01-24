@@ -19,6 +19,10 @@ type JdbcImpl struct {
 	db *gorm.DB
 }
 
+func NewJdbcImpl(db *gorm.DB) *JdbcImpl {
+	return &JdbcImpl{db: db}
+}
+
 func (impl *JdbcImpl) GetProfileByUserId(ctx context.Context, userId uint) (*Profile, error) {
 	if impl.db == nil {
 		return nil, fmt.Errorf("DB ERROR, err = DB is Nil")

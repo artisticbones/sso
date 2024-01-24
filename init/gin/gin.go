@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
-	"os"
-	"os/signal"
+	"time"
 )
 
 const (
@@ -17,10 +17,6 @@ const (
 
 func Start(ctx context.Context) error {
 	engine := gin.Default()
-
-	// 使用无缓冲的通道来监听系统信号
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
 
 	// 创建一个 HTTP 服务
 	server := &http.Server{
@@ -34,12 +30,15 @@ func Start(ctx context.Context) error {
 			fmt.Printf("Error: %v\n", err)
 		}
 	}()
-	// 等待系统信号或者优雅停止信号
-	<-quit
+
+	select {
+	case <-ctx.Done():
+		log.Println("shutting down gracefully, press Ctrl+C again to force")
+	}
 
 	// 创建一个 context，设置超时时间
-	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	//defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	// 关闭 HTTP 服务
 	if err := server.Shutdown(ctx); err != nil {
