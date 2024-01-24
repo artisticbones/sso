@@ -11,19 +11,20 @@ import (
 
 type DB struct {
 	DB    *gorm.DB
-	once  sync.Once
 	mu    sync.Mutex
 	debug bool
 }
 
-var _db *DB
+var (
+	_db  *DB
+	once sync.Once
+)
 
 func nowFunc() time.Time {
 	return time.Now().UTC()
 }
 
-func newDB(debug bool) (*DB, error) {
-	dsn := ""
+func newDB(dsn string, debug bool) (*DB, error) {
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: &schema.NamingStrategy{
 			TablePrefix: "sso_",
@@ -42,28 +43,22 @@ func newDB(debug bool) (*DB, error) {
 		db = db.Debug()
 	}
 
-	err = db.AutoMigrate()
-	if err != nil {
-		return nil, err
-	}
-
 	return &DB{
 		DB:    db,
-		once:  sync.Once{},
 		mu:    sync.Mutex{},
 		debug: debug,
 	}, nil
 }
 
-func GetDB(debug bool) *DB {
+func GetDB(dsn string, debug bool) *DB {
 	f := func() {
-		db, err := newDB(debug)
+		db, err := newDB(dsn, debug)
 		if err != nil {
 			log.Fatalf("init database error, err = %v", err)
 		}
 		_db = db
 	}
-	_db.once.Do(f)
+	once.Do(f)
 
 	_db.mu.Lock()
 	defer _db.mu.Unlock()
@@ -79,4 +74,8 @@ func (ins *DB) Close() error {
 		return err
 	}
 	return d.Close()
+}
+
+func (ins *DB) AutoMigrate(dst ...interface{}) error {
+	return ins.DB.AutoMigrate(dst...)
 }

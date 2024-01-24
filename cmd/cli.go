@@ -8,6 +8,10 @@ import (
 	"github.com/artisticbones/sso/init/cache"
 	"github.com/artisticbones/sso/init/database"
 	"github.com/artisticbones/sso/init/gin"
+	"github.com/artisticbones/sso/server/models/address"
+	"github.com/artisticbones/sso/server/models/global"
+	"github.com/artisticbones/sso/server/models/profile"
+	"github.com/artisticbones/sso/server/models/user"
 	"github.com/redis/go-redis/v9"
 	"github.com/urfave/cli/v2"
 	"log"
@@ -44,21 +48,27 @@ func commandNotFound(cCtx *cli.Context, command string) {
 
 func action(cCtx *cli.Context) error {
 	var (
-		globalCfg = configs.Gloal()
+		globalCfg = configs.Global()
 	)
-
-	db := database.GetDB(func() bool {
+	f := func() (string, bool) {
+		uri := globalCfg.Orm.Uri()
 		if globalCfg.Mode == "dev" {
-			return true
+			return uri, true
 		}
-		return false
-	}())
-	defer func(db *database.DB) {
-		err := db.Close()
-		if err != nil {
+		return uri, false
+	}
+	clo := func(db *database.DB) {
+		if err := db.Close(); err != nil {
 			log.Fatal(err)
 		}
-	}(db)
+	}
+
+	db := database.GetDB(f())
+	defer clo(db)
+	err := db.AutoMigrate(&address.Address{}, &global.AuthLog{}, &global.OptLog{}, &profile.Profile{}, &user.User{})
+	if err != nil {
+		return err
+	}
 
 	return gin.Start(cCtx.Context)
 }
@@ -101,7 +111,7 @@ func before(ctx *cli.Context) error {
 		return fmt.Errorf("cannot get config file")
 	}
 
-	rdb = cache.Get(cfg.Cache.RedisUri())
+	rdb = cache.Get(cfg.Cache.Uri())
 
 	resp, err := rdb.Ping(ctx.Context).Result()
 	if err != nil {

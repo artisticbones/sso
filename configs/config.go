@@ -19,7 +19,11 @@ const (
 	defaultKeepAliveTimeOut = 6 * time.Second
 )
 
-type UriConfig struct {
+type Backend interface {
+	Uri() string
+}
+
+type RedisConfig struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	Host     string `yaml:"host"`
@@ -27,16 +31,11 @@ type UriConfig struct {
 	Database string `yaml:"database"`
 }
 
-type logger struct {
-	Level string `yaml:"level"`
-	File  string `yaml:"file"`
-}
-
-// RedisUri redis :// [[username :] password@] host [:port][/database]
+// Uri redis :// [[username :] password@] host [:port][/database]
 //
 //	[?[timeout=timeout[d|h|m|s|ms|us|ns]] [&clientName=clientName]
 //	[&libraryName=libraryName] [&libraryVersion=libraryVersion] ]
-func (cfg *UriConfig) RedisUri() string {
+func (cfg *RedisConfig) Uri() string {
 	uri := "redis://"
 	if cfg.User != "" {
 		uri = uri + cfg.User + ":"
@@ -47,28 +46,41 @@ func (cfg *UriConfig) RedisUri() string {
 	return fmt.Sprintf("%s?dial_timeout=%ds&read_timeout=%ds", uri+cfg.Host+":"+cfg.Port+"/"+cfg.Database, defaultDialTimeout/time.Second, defaultCommandTimeOut/time.Second)
 }
 
-func (cfg *UriConfig) MysqlUri() string {
-	uri := "mysql://"
+type MysqlConfig struct {
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	Database string `yaml:"database"`
+	Net      string `yaml:"net"`
+}
+
+func (cfg *MysqlConfig) Uri() string {
+	uri := ""
 	if cfg.User != "" {
 		uri = uri + cfg.User + ":"
 	}
 	if cfg.Password != "" {
 		uri = uri + cfg.Password + "@"
 	}
-	return uri + cfg.Host + ":" + cfg.Port + "/" + cfg.Database + "?charset=utf8mb4&parseTime=True&loc=UTC"
+	return uri + cfg.Net + "(" + cfg.Host + ":" + cfg.Port + ")" + "/" + cfg.Database + "?charset=utf8mb4&parseTime=True&loc=UTC"
+}
+
+type logger struct {
+	Level string `yaml:"level"`
+	File  string `yaml:"file"`
 }
 
 type Config struct {
-	Mode      string    `yaml:"mode"`
-	JwtSecret string    `yaml:"jwtSecret"`
-	Log       logger    `yaml:"log"`
-	Orm       UriConfig `yaml:"orm"`
-	Cache     UriConfig `yaml:"cache"`
+	Mode      string      `yaml:"mode"`
+	JwtSecret string      `yaml:"jwtSecret"`
+	Log       logger      `yaml:"log"`
+	Orm       MysqlConfig `yaml:"orm"`
+	Cache     RedisConfig `yaml:"cache"`
 }
 
 var (
 	_cfg *Config
-	mu   sync.Mutex
 	once sync.Once
 )
 
@@ -90,14 +102,15 @@ func New(mode, jwt, level, file, orm, cache string) *Config {
 				Level: level,
 				File:  file,
 			},
-			Orm: UriConfig{
+			Orm: MysqlConfig{
 				User:     config.User,
 				Password: config.Passwd,
 				Host:     config.Addr,
 				Port:     "3306",
 				Database: config.DBName,
+				Net:      config.Net,
 			},
-			Cache: UriConfig{
+			Cache: RedisConfig{
 				User:     options.Username,
 				Password: options.Password,
 				Host:     options.Addr,
@@ -133,6 +146,6 @@ func Load(path string) *Config {
 	return _cfg
 }
 
-func Gloal() *Config {
+func Global() *Config {
 	return _cfg
 }

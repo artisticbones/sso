@@ -10,7 +10,7 @@ type OptLog struct {
 }
 
 func (OptLog) Table() string {
-	return "sso_opt_log"
+	return "sso_opt_logs"
 }
 
 type AuthLog struct {
@@ -22,5 +22,5 @@ type AuthLog struct {
 }
 
 func (AuthLog) Table() string {
-	return "sso_auth_log"
+	return "sso_auth_logs"
 }
