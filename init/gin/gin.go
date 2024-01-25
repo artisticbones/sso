@@ -17,12 +17,12 @@ const (
 
 func Start(ctx context.Context) error {
 	engine := gin.Default()
-
 	// 创建一个 HTTP 服务
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", addr, port),
 		Handler: engine,
 	}
+	// add router and middlewares
 
 	// 启动 HTTP 服务（在 Goroutine 中）
 	go func() {
