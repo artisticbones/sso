@@ -22,8 +22,8 @@ func Start(ctx context.Context) error {
 		Addr:    fmt.Sprintf("%s:%d", addr, port),
 		Handler: engine,
 	}
-	// add router and middlewares
-
+	// setup router and middlewares
+	setupRouter(engine)
 	// 启动 HTTP 服务（在 Goroutine 中）
 	go func() {
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
