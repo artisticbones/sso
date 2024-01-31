@@ -3,15 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/artisticbones/sso/cmd/commands"
 	"github.com/artisticbones/sso/cmd/flags"
 	"github.com/artisticbones/sso/configs"
 	"github.com/artisticbones/sso/init/cache"
 	"github.com/artisticbones/sso/init/database"
 	"github.com/artisticbones/sso/init/gin"
-	"github.com/artisticbones/sso/server/models/address"
-	"github.com/artisticbones/sso/server/models/global"
-	"github.com/artisticbones/sso/server/models/profile"
-	"github.com/artisticbones/sso/server/models/user"
 	"github.com/redis/go-redis/v9"
 	"github.com/urfave/cli/v2"
 	"log"
@@ -48,56 +45,6 @@ func commandNotFound(cCtx *cli.Context, command string) {
 
 func action(cCtx *cli.Context) error {
 	var (
-		globalCfg = configs.Global()
-	)
-	f := func() (string, bool) {
-		uri := globalCfg.Orm.Uri()
-		if globalCfg.Mode == "dev" {
-			return uri, true
-		}
-		return uri, false
-	}
-	clo := func(db *database.DB) {
-		if err := db.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	db := database.GetDB(f())
-	defer clo(db)
-	err := db.AutoMigrate(&address.Address{}, &global.AuthLog{}, &global.OptLog{}, &profile.Profile{}, &user.User{})
-	if err != nil {
-		return err
-	}
-
-	return gin.Start(cCtx.Context)
-}
-
-var (
-	app = &cli.App{
-		Name:                   cliName,
-		Usage:                  cliUsage,
-		Args:                   true,
-		Description:            cliDescription,
-		EnableBashCompletion:   true,
-		Before:                 before,
-		After:                  nil,
-		Action:                 action,
-		CommandNotFound:        commandNotFound,
-		Compiled:               compileTime(),
-		Authors:                authors,
-		Copyright:              copyright,
-		Reader:                 os.Stdin,
-		Writer:                 os.Stdout,
-		ErrWriter:              os.Stderr,
-		UseShortOptionHandling: true,
-		Suggest:                true,
-	}
-)
-
-func before(ctx *cli.Context) error {
-	// init config
-	var (
 		cfg *configs.Config
 		rdb *redis.Client
 	)
@@ -112,19 +59,56 @@ func before(ctx *cli.Context) error {
 	}
 
 	rdb = cache.Get(cfg.Cache.Uri())
-
-	resp, err := rdb.Ping(ctx.Context).Result()
+	resp, err := rdb.Ping(cCtx.Context).Result()
 	if err != nil {
 		return err
 	}
 	if resp != "PONG" {
 		return fmt.Errorf("ping rdb server but without %s response", resp)
 	}
-	return nil
+
+	f := func() (string, bool) {
+		uri := cfg.Orm.Uri()
+		if cfg.Mode == "dev" {
+			return uri, true
+		}
+		return uri, false
+	}
+	clo := func(db *database.DB) {
+		if err := db.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	db := database.GetDB(f())
+	defer clo(db)
+
+	return gin.Start(cCtx.Context)
 }
 
+var (
+	app = &cli.App{
+		Name:                   cliName,
+		Usage:                  cliUsage,
+		Args:                   true,
+		Description:            cliDescription,
+		EnableBashCompletion:   true,
+		After:                  nil,
+		Action:                 action,
+		CommandNotFound:        commandNotFound,
+		Compiled:               compileTime(),
+		Authors:                authors,
+		Copyright:              copyright,
+		Reader:                 os.Stdin,
+		Writer:                 os.Stdout,
+		ErrWriter:              os.Stderr,
+		UseShortOptionHandling: true,
+		Suggest:                true,
+	}
+)
+
 func init() {
-	app.Commands = append(app.Commands)
+	app.Commands = append(app.Commands, &commands.Migrate)
 	// global flags
 	app.Flags = append(app.Flags, &flags.ModeFlag, &flags.JwtFlag, &flags.LogLevelFlag, &flags.CfgFilePathFlag, &flags.OrmFlag, &flags.CacheFlag)
 	sort.Sort(cli.CommandsByName(app.Commands))
